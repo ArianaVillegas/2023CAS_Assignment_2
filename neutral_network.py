@@ -1,6 +1,7 @@
-from itertools import combinations, permutations
+from itertools import combinations, permutations, product
 from scipy.special import binom
 import numpy as np
+import math
 
 
 table = {
@@ -38,14 +39,13 @@ class BasicNeutralNetwork:
             for cmp_codon in table:
                 if sum([(codon[i] != cmp_codon[i]) for i in range(3)]) == self.n_mutations:
                     if table[codon] == table[cmp_codon]:
-                        syn.append(cmp_codon)
+                        syn.append(table[cmp_codon])
                     else:
-                        nonsyn.append(cmp_codon)
-            self.mutations[codon] = (syn, nonsyn)
+                        nonsyn.append(table[cmp_codon])
+            self.mutations[table[codon]] = (syn, nonsyn)
             
     def get_mutation(self, codon):
         return self.mutations[codon]
-
 
 
 class NeutralNetworkCounter:
@@ -54,20 +54,37 @@ class NeutralNetworkCounter:
         self.size = len(seq)
         
     def build(self, n_mutations):
-        self.neighborhood = [BasicNeutralNetwork(i+1) for i in range(n_mutations)]
+        self.neighborhood = [BasicNeutralNetwork(i+1) for i in range(2)]
+        print(max([(len(self.neighborhood[0].mutations[k][0]), k) for k in self.neighborhood[0].mutations]))
+        print([(len(self.neighborhood[1].mutations[k][0]), k) for k in self.neighborhood[1].mutations])
+        print(max([(len(self.neighborhood[1].mutations[k][0]), k) for k in self.neighborhood[1].mutations]))
         self.syn = []
         for n in self.neighborhood:
             self.syn.append(np.array([len(n.get_mutation(self.seq[i:i+3])[0]) for i in range(0, len(self.seq), 3)]))
+            
+        uniq = [[1, sum(self.syn[0])], [1, sum(self.syn[1])]]
+        for idx in range(2):
+            for i in range(2, 1 + n_mutations//(idx+1)):
+                cur = uniq[idx][i-1] * uniq[idx][1] 
+                for k in range(i-1):
+                    cur -= (-1)**k * np.sum(np.power(self.syn[idx], 2+k)) * uniq[idx][i-2-k]
+                cur //= i
+                uniq[idx].append(cur)
         
-        syn_cnt, nonsyn_cnt = 0, 0
-        syn_cnt += np.sum(self.syn[n_mutations-1])
-        if n_mutations == 2:
-            syn_cnt += (np.power(np.sum(self.syn[0]), 2) - np.sum(np.power(self.syn[0], 2))) / 2
-        elif n_mutations == 3:
-            syn_cnt += np.sum(self.syn[0]) * np.sum(self.syn[1]) - np.dot(self.syn[0], self.syn[1])
-            syn_cnt += (np.power(np.sum(self.syn[0]), 3) - 3*np.dot(self.syn[0], np.power(self.syn[0], 2)) + 2*np.sum(np.power(self.syn[0], 3))) / 6
+        print(self.syn)
+        print(uniq)                
+        syn_cnt = 0
+        for i in range(0, n_mutations + 1, 2):
+            cur_cnt = uniq[0][n_mutations - i] * uniq[1][i//2] 
+            syn_cnt += cur_cnt
         
         nonsyn_cnt = binom(self.size, n_mutations) * 3**n_mutations - syn_cnt
             
         return int(syn_cnt), int(nonsyn_cnt)
+    
+    
+    
+
+
+
                 
