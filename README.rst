@@ -16,17 +16,26 @@ Part 2
 --------------------------------------------------------------------------------
 To run the code for part 2, first activate the conda environment::
 
-        $ conda env create -f=./environment.yml
+        $ conda env create -f=.part2/environment.yml
         $ conda activate antigenic
 
 Then run::
 
-        $ python part2.py --breadth 5 --max-dist 1
+        $ python -m part2 --breadth 5 --max-dist 1 --max-depth 5
+
+This will perform a random walk through the neutral network. From each node
+in the neutral network, it will generate ``breadth`` random mutations. If a
+random mutation is ``max-dist`` mutations away from the neutral network, it is
+marked as a leaf of the search tree and the walk is stopped down that path.
+This will generate a depth-first-search tree of the neutral network, rooted at
+the original genome, with a maximum depth of ``max-depth``.
 
 For more information about the command-line arguments, run::
 
-        $ python part2.py --help
+        $ python -m part2 --help
 
 Part 3
 --------------------------------------------------------------------------------
+To run the code for part 3::
 
+        $ foo bar
