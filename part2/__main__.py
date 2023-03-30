@@ -1,18 +1,47 @@
 import random
+import pandas as pd
+import math
 
-# Constants
+# Global variables
 START_SITE = 331
 END_SITE   = 531
 NEUTRAL_THRESHOLD = 0.5 # Any fitness change less than this is marked neutral
 AMINO_ACIDS = "RKHDEQNSTYWFAILMVGPC*"
+
+MUT_DATA_PATH = "part2/aamut_fitness_rbd.csv"
+
+g_mut_data = None
 
 def is_neutral(mutations, fitness):
     if abs(fitness) <= NEUTRAL_THRESHOLD:
         return True
     return False
 
+def is_valid_site(site):
+    return site in g_mut_data.index
+
+def is_valid_mutation(site, amino_acid):
+    if (g_mut_data.loc[[site]]["original"] == amino_acid).any():
+        return False
+    val = g_mut_data.loc[[site]][amino_acid]
+    if len(val) > 1:
+        val = max(val)
+    if math.isnan(val):
+        return False
+    return True
+
 def get_fitness(mutations):
-    return random.gauss(0.0, 1.0) * 5.0 / 3.0
+    global g_mut_data
+
+    fitness = 0.0
+    if g_mut_data is None:
+        g_mut_data = pd.read_csv(MUT_DATA_PATH, index_col="site")
+
+    for site, aa in mutations:
+        tmp = g_mut_data.loc[[site]][aa].values[0]
+        fitness += tmp
+
+    return fitness
 
 class RBD:
     def __init__(self, mutations=None):
@@ -36,12 +65,14 @@ class RBD:
         return res
 
     def get_mutated(self, site=None, amino_acid=None):
-        if site is None:
+        while site is None or not is_valid_site(site):
             site = random.randint(START_SITE, END_SITE)
-        if amino_acid is None:
+        while amino_acid is None or not is_valid_mutation(site, amino_acid):
             amino_acid = random.choice(AMINO_ACIDS)
         res = RBD(self.mutations)
         res.mutations.append((site, amino_acid))
+        res.fitness = get_fitness(res.mutations)
+        res.is_neutral = is_neutral(res.mutations, res.fitness)
         #TODO: sort mutations by site and remove mutations with same a.a.
         #TODO: sample mutations from empirical mutation distribution
         return res
@@ -112,8 +143,13 @@ if __name__=="__main__":
             help="The seed used for the pseudo-random number generator")
     parser.add_argument("--neutral-threshold", type=int, default=0.5,
             help="The threshold for what fitness change is considered neutral")
+    parser.add_argument("--mut-csv", type=str, default="part2/aamut_fitness_rbd.csv",
+            help="The relative path to the rbd-mutation-fitness data")
     args = parser.parse_args()
 
     random.seed(args.seed)
+    NEUTRAL_THRESHOLD = args.neutral_threshold
+    MUT_DATA_PATH = args.mut_csv
+    g_mut_data = pd.read_csv(MUT_DATA_PATH, index_col="site")
 
     main(breadth=args.breadth, max_dist=args.max_dist, max_depth=args.max_depth)

@@ -43,7 +43,7 @@ References
 
         $ curl https://raw.githubusercontent.com/jbloomlab/SARS2-mut-fitness/main/results/aa_fitness/aamut_fitness_all.csv > part2/aamut_fitness_all.csv
 
-  and then converted using::
+  and then processed using::
 
         $ python -m part2.generate_rbd_fitness
 
