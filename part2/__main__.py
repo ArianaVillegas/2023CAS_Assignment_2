@@ -1,20 +1,33 @@
+import random
+
 # Constants
 START_SITE = 331
 END_SITE   = 531
+NEUTRAL_THRESHOLD = 0.5 # Any fitness change less than this is marked neutral
+AMINO_ACIDS = "RKHDEQNSTYWFAILMVGPC*"
 
-def is_neutral(mutations):
+def is_neutral(mutations, fitness):
+    if abs(fitness) <= NEUTRAL_THRESHOLD:
+        return True
     return False
+
+def get_fitness(mutations):
+    return random.gauss(0.0, 1.0) * 5.0 / 3.0
 
 class RBD:
     def __init__(self, mutations=None):
         if mutations is None:
             self.mutations = []
             self.is_neutral = True
+            self.fitness = 0.0
         else:
             self.mutations = [mut for mut in mutations]
-            self.is_neutral = is_neutral(mutations)
+            self.fitness = get_fitness(mutations)
+            self.is_neutral = is_neutral(mutations, self.fitness)
+
     def __repr__(self):
         res = "\n\tRBD ("
+        res += f"fitness: {self.fitness: 4.2f}, "
         res += f"is_neutral: {str(self.is_neutral):5s}, "
         res += "mutations:"
         for site, aa in self.mutations:
@@ -22,10 +35,15 @@ class RBD:
         res += ")"
         return res
 
-    def get_mutated(self, site, amino_acid):
+    def get_mutated(self, site=None, amino_acid=None):
+        if site is None:
+            site = random.randint(START_SITE, END_SITE)
+        if amino_acid is None:
+            amino_acid = random.choice(AMINO_ACIDS)
         res = RBD(self.mutations)
         res.mutations.append((site, amino_acid))
         #TODO: sort mutations by site and remove mutations with same a.a.
+        #TODO: sample mutations from empirical mutation distribution
         return res
 
 def dfs_helper(node, explored, dist, depth, breadth, max_dist, max_depth):
@@ -34,9 +52,9 @@ def dfs_helper(node, explored, dist, depth, breadth, max_dist, max_depth):
         return res
 
     for i in range(breadth):
-        child = node.get_mutated(breadth * depth + i, "A")
-        if child in explored or child in res: #TODO: Recalculate until new
-            continue
+        child = node.get_mutated()
+        while child in explored or child in res: #TODO: Recalculate until new
+            child = node.get_mutated()
         res.append(child)
         tmp_dist = dist
         if child.is_neutral:
@@ -90,6 +108,12 @@ if __name__=="__main__":
             help="The maximum number of mutations to explore past the neutral network")
     parser.add_argument("--max-depth", type=int, default=5,
             help="The maximum number of mutations to explore from the root")
+    parser.add_argument("--seed", type=int, default=42,
+            help="The seed used for the pseudo-random number generator")
+    parser.add_argument("--neutral-threshold", type=int, default=0.5,
+            help="The threshold for what fitness change is considered neutral")
     args = parser.parse_args()
+
+    random.seed(args.seed)
 
     main(breadth=args.breadth, max_dist=args.max_dist, max_depth=args.max_depth)
