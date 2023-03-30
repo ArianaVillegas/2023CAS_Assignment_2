@@ -21,11 +21,7 @@ To run the code for part 2, first activate the conda environment::
 
 Then run::
 
-        $ python -m part2 \
-                --breadth 5 \
-                --max-dist 1 \
-                --max-depth 5 \
-                --neutral-threshold 0.5
+        $ python -m part2
 
 This will perform a random walk through the neutral network. From each node
 in the neutral network, it will generate ``breadth`` random mutations. If a
@@ -40,14 +36,18 @@ For more information about the command-line arguments, run::
 
 References
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-* The data used for fitness calculation was pulled from https://github.com/jbloomlab/SARS2-mut-fitness/blob/main/data/Neher_aa_fitness.csv
+* The data used for fitness calculation was pulled from https://github.com/jbloomlab/SARS2-mut-fitness/
   using::
 
-        $ curl https://github.com/jbloomlab/SARS2-mut-fitness/blob/main/data/Neher_aa_fitness.csv > part2/Neher_aa_fitness.csv
+        $ curl https://raw.githubusercontent.com/jbloomlab/SARS2-mut-fitness/main/results/aa_fitness/aamut_fitness_all.csv > part2/aamut_fitness_all.csv
 
   and then converted using::
 
-        $ python -m part2.generate_rbd_fitness --file part2/Neher_aa_fitness.csv
+        $ python -m part2.generate_rbd_fitness
+
+  For more information about command-line arguments, run::
+
+        $ python -m part2.generate_rdb_fitness --help
 
 Part 3
 --------------------------------------------------------------------------------
