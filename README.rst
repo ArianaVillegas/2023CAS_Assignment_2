@@ -5,6 +5,13 @@ Complex Adaptive Systems Assignment 2
 This repository holds the code for our (Ariana Villegas, Christopher Leap,
 Emmanuel Ohiri) report for assignment 2.
 
+Conda Environment
+--------------------------------------------------------------------------------
+Before running any of the code, create and activate our conda environment::
+
+        $ conda env create -f=environment.yml
+        $ conda activate antigenic
+
 Part 1
 --------------------------------------------------------------------------------
 To run the code for part 1::
@@ -14,11 +21,6 @@ To run the code for part 1::
 
 Part 2
 --------------------------------------------------------------------------------
-To run the code for part 2, first activate the conda environment::
-
-        $ conda env create -f=./part2/environment.yml
-        $ conda activate antigenic
-
 Then run::
 
         $ python -m part2
