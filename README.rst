@@ -14,9 +14,44 @@ Before running any of the code, create and activate our conda environment::
 
 Part 1
 --------------------------------------------------------------------------------
-To run the code for part 1::
+For A section, run::
 
-        $ foo bar
+        $ python -m part1.a
+
+This will perform an approximate count of synonymous mutations in a ``n`` 
+neutral network. The process used to count the mutations is explained in 
+the report.
+
+For more information about the command-line arguments, run::
+
+        $ python -m part1.a --help
+
+For B section, run::
+
+        $ python -m part1.b
+
+This will perform an approximate count of antigenically neutral mutations 
+in a ``n`` neutral network. The process used to count the neutral mutations 
+is explained in the report.
+
+For more information about the command-line arguments, run::
+
+        $ python -m part1.b --help
+
+References
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+* The data used for escape table was pulled from https://github.com/jbloomlab/SARS2_RBD_Ab_escape_maps
+  using::
+
+        $ curl https://raw.githubusercontent.com/jbloomlab/SARS2_RBD_Ab_escape_maps/main/processed_data/escape_calculator_data.csv > part1/escape_calculator_data.csv
+
+  and then converted using::
+
+        $ python -m part1.process_escape_table
+
+  For more information about command-line arguments, run::
+
+        $ python -m part1.process_escape_table --help
 
 
 Part 2
