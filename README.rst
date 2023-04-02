@@ -89,7 +89,11 @@ References
 Part 3
 --------------------------------------------------------------------------------
 To run the code for part 3::
+
         From the main directory::
+        
                 $ cd part3
+                
         Then:
+        
                 $ python -m mutation_probability
