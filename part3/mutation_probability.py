@@ -1,4 +1,4 @@
-# Wrtten in collaboration with Christopher Leap
+# Collaboration by Emmanuel Ohiri Christopher Leap
 
 from neutral_network import table, BasicNeutralNetwork
 import numpy as np
