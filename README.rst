@@ -93,6 +93,6 @@ From the main directory::
         
         $ cd part3
         
-Then:
+Then::
         
         $ python -m mutation_probability
