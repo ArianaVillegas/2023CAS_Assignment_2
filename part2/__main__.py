@@ -1,16 +1,24 @@
+from graph_tool.all import Graph, graph_draw
+from graph_tool.draw import radial_tree_layout
 import random
 import pandas as pd
+import matplotlib
 import math
+import os
 
 # Global variables
 START_SITE = 331
 END_SITE   = 531
 NEUTRAL_THRESHOLD = 0.5 # Any fitness change less than this is marked neutral
 AMINO_ACIDS = "RKHDEQNSTYWFAILMVGPC*"
-
 MUT_DATA_PATH = "part2/aamut_fitness_rbd.csv"
+OUT_DIR = "figures/"
+COLOR_GOOD = (121 / 255.0, 159 / 255.0, 203 / 255.0, 1.0)
+COLOR_BAD =  (249 / 255.0, 102 / 255.0,  94 / 255.0, 1.0)
 
 g_mut_data = None
+g_v_fitness_color = None
+g_v_fitness_str = None
 
 def is_neutral(mutations, fitness):
     if abs(fitness) <= NEUTRAL_THRESHOLD:
@@ -44,7 +52,9 @@ def get_fitness(mutations):
     return fitness
 
 class RBD:
-    def __init__(self, mutations=None):
+    def __init__(self, graph, mutations=None):
+        self.graph = graph
+        self.vertex = graph.add_vertex()
         if mutations is None:
             self.mutations = []
             self.is_neutral = True
@@ -53,6 +63,13 @@ class RBD:
             self.mutations = [mut for mut in mutations]
             self.fitness = get_fitness(mutations)
             self.is_neutral = is_neutral(mutations, self.fitness)
+        if self.is_neutral:
+            g_v_fitness_color[self.vertex] = (1, 1, 1, 1)
+        elif self.fitness < 0:
+            g_v_fitness_color[self.vertex] = COLOR_BAD
+        elif self.fitness > 0:
+            g_v_fitness_color[self.vertex] = COLOR_GOOD
+        g_v_fitness_str[self.vertex] = f"{self.fitness:4.2f}"
 
     def __repr__(self):
         res = "\n\tRBD ("
@@ -69,10 +86,11 @@ class RBD:
             site = random.randint(START_SITE, END_SITE)
         while amino_acid is None or not is_valid_mutation(site, amino_acid):
             amino_acid = random.choice(AMINO_ACIDS)
-        res = RBD(self.mutations)
-        res.mutations.append((site, amino_acid))
-        res.fitness = get_fitness(res.mutations)
-        res.is_neutral = is_neutral(res.mutations, res.fitness)
+        res = RBD(self.graph, self.mutations + [(site, amino_acid)])
+        self.graph.add_edge(self.vertex, res.vertex)
+#         res.mutations.append((site, amino_acid))
+#         res.fitness = get_fitness(res.mutations)
+#         res.is_neutral = is_neutral(res.mutations, res.fitness)
         #TODO: sort mutations by site and remove mutations with same a.a.
         #TODO: sample mutations from empirical mutation distribution
         return res
@@ -117,12 +135,32 @@ def dfs(breadth, max_dist, max_depth):
       explored: list(RBD)
         A list of the mutated RBD genomes explored during the dfs.
     """
-    root = RBD()
+    global g_v_fitness_color
+    global g_v_fitness_str
+
+    graph = Graph(directed=False)
+    g_v_fitness_color = graph.new_vertex_property("vector<double>")
+    g_v_fitness_str = graph.new_vertex_property("string")
+
+    root = RBD(graph)
+    g_v_fitness_color[root.vertex] = (1, 1, 1, 1)
     explored = [root]
     dist = 0
     depth = 0
-    return explored + dfs_helper(root, explored, dist, depth,
+
+    # Generate search tree
+    res = explored + dfs_helper(root, explored, dist, depth,
             breadth, max_dist, max_depth)
+
+    graph_draw(
+            graph,
+            pos=radial_tree_layout(graph, 0),
+            vertex_fill_color=g_v_fitness_color,
+            vcmap=matplotlib.cm.bwr,
+#             vertex_text=g_v_fitness_str, #graph.vertex_index,
+#             font_size=8,
+            output=f"{OUT_DIR}/neutral_network.pdf")
+    return res
 
 def main(breadth, max_dist, max_depth):
 
@@ -132,6 +170,7 @@ def main(breadth, max_dist, max_depth):
 
 if __name__=="__main__":
     import argparse
+
     parser = argparse.ArgumentParser()
     parser.add_argument("--breadth", type=int, default=5,
             help="The breadth with which to search the mutation space")
@@ -145,11 +184,18 @@ if __name__=="__main__":
             help="The threshold for what fitness change is considered neutral")
     parser.add_argument("--mut-csv", type=str, default="part2/aamut_fitness_rbd.csv",
             help="The relative path to the rbd-mutation-fitness data")
+    parser.add_argument("--out-dir", type=str, default="figures/",
+            help="The directory to save figures into")
     args = parser.parse_args()
 
     random.seed(args.seed)
     NEUTRAL_THRESHOLD = args.neutral_threshold
     MUT_DATA_PATH = args.mut_csv
+    OUT_DIR = args.out_dir
+
+    if not os.path.isdir(OUT_DIR):
+        os.mkdir(OUT_DIR)
+
     g_mut_data = pd.read_csv(MUT_DATA_PATH, index_col="site")
 
     main(breadth=args.breadth, max_dist=args.max_dist, max_depth=args.max_depth)
