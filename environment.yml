@@ -1,9 +1,12 @@
 name: antigenic
 channels:
+  - bioconda
   - conda-forge
   - defaults
 dependencies:
   - python=3.10
+  - pip
   - pandas=1.5.3
   - scipy
   - conda-forge::graph-tool=2.48
+    #- biopython #=1.79 # From here down are dependencies for the escape calculator - git-lfs - jupyterlab - nbstripout - openpyxl - ruamel.yaml #=0.16 - pdoc - scikit-learn #=0.24.1 - xlrd - pip: - dmslogo #==0.6.3 - git+https://github.com/altair-viz/altair@0217b2e73703d3b7b529b73b4dec9c17e7fb09bb

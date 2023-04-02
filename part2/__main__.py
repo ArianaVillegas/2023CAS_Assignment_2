@@ -6,27 +6,38 @@ import matplotlib
 import math
 import os
 
+from pathlib import Path
+import sys
+sys.path.append("part2/SARS2_RBD_Ab_escape_maps")
+import bindingcalculator as bc
+
 # Global variables
 START_SITE = 331
 END_SITE   = 531
-NEUTRAL_THRESHOLD = 0.5 # Any fitness change less than this is marked neutral
+NEUTRAL_CRITERION = "fitness" # The criterion to determine neutrality
+FITNESS_THRESHOLD = 0.5 # Any fitness change less than this is marked neutral
+ESCAPE_THRESHOLD = 0.96 # Any % antibody binding above this is marked neutral
 AMINO_ACIDS = "RKHDEQNSTYWFAILMVGPC*"
 MUT_DATA_PATH = "part2/aamut_fitness_rbd.csv"
 OUT_DIR = "figures/"
 COLOR_GOOD = (121 / 255.0, 159 / 255.0, 203 / 255.0, 1.0)
 COLOR_BAD =  (249 / 255.0, 102 / 255.0,  94 / 255.0, 1.0)
+COLOR_ROOT = (0.0, 0.0, 0.0, 1.0)
 
 g_mut_data = None
 g_v_fitness_color = None
 g_v_fitness_str = None
+g_bc = None
 
-def is_neutral(mutations, fitness):
-    if abs(fitness) <= NEUTRAL_THRESHOLD:
-        return True
+def is_neutral(mutations, fitness, escape):
+    if NEUTRAL_CRITERION == "fitness":
+        return abs(fitness) <= FITNESS_THRESHOLD # delta fitness <= threshold
+    if NEUTRAL_CRITERION == "escape":
+        return escape >= ESCAPE_THRESHOLD # % of antibodies >= threshold
     return False
 
 def is_valid_site(site):
-    return site in g_mut_data.index
+    return (site in g_mut_data.index and site in g_bc.sites)
 
 def is_valid_mutation(site, amino_acid):
     if (g_mut_data.loc[[site]]["original"] == amino_acid).any():
@@ -51,6 +62,11 @@ def get_fitness(mutations):
 
     return fitness
 
+def get_escape(mutations):
+    sites = [site for site, _ in mutations if site in g_bc.sites]
+    res = g_bc.binding_retained(sites)
+    return res
+
 class RBD:
     def __init__(self, graph, mutations=None):
         self.graph = graph
@@ -59,10 +75,12 @@ class RBD:
             self.mutations = []
             self.is_neutral = True
             self.fitness = 0.0
+            self.escape = 1.0
         else:
             self.mutations = [mut for mut in mutations]
             self.fitness = get_fitness(mutations)
-            self.is_neutral = is_neutral(mutations, self.fitness)
+            self.escape = get_escape(mutations)
+            self.is_neutral = is_neutral(mutations, self.fitness, self.escape)
         if self.is_neutral:
             g_v_fitness_color[self.vertex] = (1, 1, 1, 1)
         elif self.fitness < 0:
@@ -74,6 +92,7 @@ class RBD:
     def __repr__(self):
         res = "\n\tRBD ("
         res += f"fitness: {self.fitness: 4.2f}, "
+        res += f"escape: {self.escape: .2f}, "
         res += f"is_neutral: {str(self.is_neutral):5s}, "
         res += "mutations:"
         for site, aa in self.mutations:
@@ -102,8 +121,10 @@ def dfs_helper(node, explored, dist, depth, breadth, max_dist, max_depth):
 
     for i in range(breadth):
         child = node.get_mutated()
-        while child in explored or child in res: #TODO: Recalculate until new
-            child = node.get_mutated()
+        if child in explored or child in res:
+            # TODO given the size of the search space, the probability of this
+            # occuring is so low, I am not handling this case
+            print("WHOAH")
         res.append(child)
         tmp_dist = dist
         if child.is_neutral:
@@ -143,7 +164,7 @@ def dfs(breadth, max_dist, max_depth):
     g_v_fitness_str = graph.new_vertex_property("string")
 
     root = RBD(graph)
-    g_v_fitness_color[root.vertex] = (1, 1, 1, 1)
+    g_v_fitness_color[root.vertex] = COLOR_ROOT
     explored = [root]
     dist = 0
     depth = 0
@@ -154,12 +175,12 @@ def dfs(breadth, max_dist, max_depth):
 
     graph_draw(
             graph,
-            pos=radial_tree_layout(graph, 0),
+#             pos=radial_tree_layout(graph, 0),
             vertex_fill_color=g_v_fitness_color,
             vcmap=matplotlib.cm.bwr,
 #             vertex_text=g_v_fitness_str, #graph.vertex_index,
 #             font_size=8,
-            output=f"{OUT_DIR}/neutral_network.pdf")
+            output=f"{OUT_DIR}/neutral_network_{NEUTRAL_CRITERION}_b{breadth}_d{max_depth}.pdf")
     return res
 
 def main(breadth, max_dist, max_depth):
@@ -180,8 +201,12 @@ if __name__=="__main__":
             help="The maximum number of mutations to explore from the root")
     parser.add_argument("--seed", type=int, default=42,
             help="The seed used for the pseudo-random number generator")
-    parser.add_argument("--neutral-threshold", type=int, default=0.5,
-            help="The threshold for what fitness change is considered neutral")
+    parser.add_argument("--neutral-criterion", type=str, default="fitness",
+            help="The criterion we use to determine neutrality of mutations. Can be either 'fitness' or 'escape'.")
+    parser.add_argument("--fitness-threshold", type=float, default=1.0,
+            help="The threshold for what fitness change is considered neutral for the fitness criterion.")
+    parser.add_argument("--escape-threshold", type=float, default=0.96,
+            help="The threshold for fraction of antibody binding is considered neutral for the escape criterion.")
     parser.add_argument("--mut-csv", type=str, default="part2/aamut_fitness_rbd.csv",
             help="The relative path to the rbd-mutation-fitness data")
     parser.add_argument("--out-dir", type=str, default="figures/",
@@ -189,13 +214,13 @@ if __name__=="__main__":
     args = parser.parse_args()
 
     random.seed(args.seed)
-    NEUTRAL_THRESHOLD = args.neutral_threshold
+    FITNESS_THRESHOLD = args.fitness_threshold
+    ESCAPE_THRESHOLD = args.escape_threshold
+    NEUTRAL_CRITERION = args.neutral_criterion
     MUT_DATA_PATH = args.mut_csv
     OUT_DIR = args.out_dir
 
-    if not os.path.isdir(OUT_DIR):
-        os.mkdir(OUT_DIR)
-
     g_mut_data = pd.read_csv(MUT_DATA_PATH, index_col="site")
+    g_bc = bc.BindingCalculator()
 
     main(breadth=args.breadth, max_dist=args.max_dist, max_depth=args.max_depth)

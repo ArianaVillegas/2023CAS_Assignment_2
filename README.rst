@@ -82,6 +82,8 @@ References
 
         $ python -m part2.generate_rbd_fitness
 
+  This will generate the fitness histogram in ``figures/fitness_dist.pdf``.
+
   For more information about command-line arguments, run::
 
         $ python -m part2.generate_rdb_fitness --help

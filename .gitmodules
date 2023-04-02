@@ -1,0 +1,3 @@
+[submodule "part2/SARS2_RBD_Ab_escape_maps"]
+	path = part2/SARS2_RBD_Ab_escape_maps
+	url = git@github.com:jbloomlab/SARS2_RBD_Ab_escape_maps.git
