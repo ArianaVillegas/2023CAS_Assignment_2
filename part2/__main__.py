@@ -3,6 +3,8 @@ from graph_tool.draw import radial_tree_layout
 import random
 import pandas as pd
 import matplotlib
+import matplotlib.pyplot as plt
+import numpy as np
 import math
 import os
 
@@ -10,6 +12,8 @@ from pathlib import Path
 import sys
 sys.path.append("part2/SARS2_RBD_Ab_escape_maps")
 import bindingcalculator as bc
+
+plt.rcParams["font.family"] = "serif"
 
 # Global variables
 START_SITE = 331
@@ -68,9 +72,10 @@ def get_escape(mutations):
     return res
 
 class RBD:
-    def __init__(self, graph, mutations=None):
+    def __init__(self, graph, depth, mutations=None):
         self.graph = graph
         self.vertex = graph.add_vertex()
+        self.depth = depth
         if mutations is None:
             self.mutations = []
             self.is_neutral = True
@@ -105,7 +110,7 @@ class RBD:
             site = random.randint(START_SITE, END_SITE)
         while amino_acid is None or not is_valid_mutation(site, amino_acid):
             amino_acid = random.choice(AMINO_ACIDS)
-        res = RBD(self.graph, self.mutations + [(site, amino_acid)])
+        res = RBD(self.graph, self.depth + 1, self.mutations + [(site, amino_acid)])
         self.graph.add_edge(self.vertex, res.vertex)
 #         res.mutations.append((site, amino_acid))
 #         res.fitness = get_fitness(res.mutations)
@@ -163,7 +168,7 @@ def dfs(breadth, max_dist, max_depth):
     g_v_fitness_color = graph.new_vertex_property("vector<double>")
     g_v_fitness_str = graph.new_vertex_property("string")
 
-    root = RBD(graph)
+    root = RBD(graph, 0)
     g_v_fitness_color[root.vertex] = COLOR_ROOT
     explored = [root]
     dist = 0
@@ -181,14 +186,67 @@ def dfs(breadth, max_dist, max_depth):
 #             vertex_text=g_v_fitness_str, #graph.vertex_index,
 #             font_size=8,
             output=f"{OUT_DIR}/neutral_network_{NEUTRAL_CRITERION}_b{breadth}_d{max_depth}.pdf")
-    return res
+    return res, graph
+
+def plot_evf(res, graph, breadth, max_depth):
+    fig, ax = plt.subplots(figsize=(7.5, 3))
+
+    xs = [1 - mut.escape for mut in res]
+    ys = [mut.depth for mut in res]
+    edges = [[v for v in edge] for edge in graph.get_edges()]
+    for [i, j] in edges:
+        x1 = 1 - res[i].escape
+        x2 = 1 - res[j].escape
+        y1 = res[i].depth
+        y2 = res[j].depth
+        ax.plot([x1, x2], [y1, y2], color="tab:blue", alpha=0.2, marker="o")
+    ax.set_xlabel("Percentage of antibodies escaped")
+    ax.set_ylabel("Single point mutations")
+    plt.savefig(f"{OUT_DIR}/escape_vs_mutations_{NEUTRAL_CRITERION}_b{breadth}_d{max_depth}.png", bbox_inches="tight")
+
+def gen_titre(res, breadth, max_depth):
+    escapes = np.array([mut.escape for mut in res])
+    titre = np.zeros((len(res),len(res)))
+    max_dists = np.array([np.max(np.abs(esc - escapes)) for esc in escapes])
+    for i in range(len(res)):
+        for j in range(len(res)):
+            if i == j:
+                continue
+            max_dist = max_dists[i]
+            this_dist = np.abs(escapes[i] - escapes[j])
+            if max_dist <= 0 or this_dist <= 0:
+                titre[i][j] = 0.0
+            else:
+                titre[i][j] = np.log2(max_dists[i]) - np.log2(np.abs(escapes[i] - escapes[j]))
+    with open(f"part2/titer_{NEUTRAL_CRITERION}_b{breadth}_d{max_depth}.csv", mode="w") as file:
+        file.write("\"\"")
+        for i in range(len(res)):
+            file.write(f", \"{i}\"")
+        file.write("\n")
+        for i in range(len(res)):
+            file.write(f"\"{i}\"")
+            for j in range(len(res)):
+                val = titre[i][j]
+                if val == 0:
+                    val = "*"
+                else:
+                    val = f"{val}"
+                file.write(f", \"{val}\"")
+            file.write("\n")
 
 def main(breadth, max_dist, max_depth):
 
     print(f"Searching the mutation graph with a breadth of {breadth} and max distance {max_dist}")
-    res = dfs(breadth, max_dist, max_depth)
+    res, graph = dfs(breadth, max_dist, max_depth)
     print(f"Result: {res}")
-
+    plot_evf(res, graph, breadth, max_depth)
+    gen_titre(res, breadth, max_depth)
+    if NEUTRAL_CRITERION == "escape":
+        escaped_good = [mut.fitness for mut in res if mut.fitness >= FITNESS_THRESHOLD]
+        escaped_bad  = [mut.fitness for mut in res if mut.fitness <= FITNESS_THRESHOLD]
+        print(f"Probability of compensating for deleterious mutations: { len(escaped_good) / (len(escaped_good) + len(escaped_bad))}")
+        escaped_total = np.array(escaped_good + escaped_bad)
+        print(f"Expected change in fitness after escaping: {np.mean(escaped_total)}")
 if __name__=="__main__":
     import argparse
 
