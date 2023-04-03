@@ -71,6 +71,11 @@ For more information about the command-line arguments, run::
 
         $ python -m part2 --help
 
+After running part2, you can generate the antigenic maps in R by changing the paths in ``part2/gen_antigenic.R``, and then running with::
+
+        $ R
+        R> source("part2/gen_antigenic.R")
+
 References
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 * The data used for fitness calculation was pulled from https://github.com/jbloomlab/SARS2-mut-fitness/
