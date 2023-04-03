@@ -66,7 +66,7 @@ def make_trans_table(num_hops):
     write_trans_table(f"{TABLE_DIR}/count_table_{num_hops}_pt.tex",
             count_table,
             int,
-            caption=f"A table of the number of {num_hops} single-point mutations that each amino acid can go through to get from one amino acid to another. The row corresponds to the starting amino acid and the row corresponds to the final amino acid.",
+            caption=f"A table of the number of {num_hops} single-point mutations that each amino acid can go through to get from one amino acid to another. The row corresponds to the starting amino acid and the column corresponds to the final amino acid.",
             label=f"count_table_{num_hops}_pt")
 
     trans_table = count_table/np.sum(count_table, axis=0)
@@ -77,7 +77,7 @@ trans_tablenp = make_trans_table(1)
 write_trans_table(f"{TABLE_DIR}/trans_tablenp.tex",
         trans_tablenp,
         float,
-        caption="A transition table for 1 single-point mutation. The row corresponds to the starting amino acid and the row corresponds to the final amino acid.",
+        caption="A transition table for 1 single-point mutation. The row corresponds to the starting amino acid and the column corresponds to the final amino acid.",
         label="trans_tablenp")
 
 for i, row in enumerate(trans_tablenp):
@@ -91,14 +91,14 @@ trans_table2p = np.dot(trans_tablenp, trans_tablenp)
 write_trans_table(f"{TABLE_DIR}/trans_table2p_non_strict.tex",
         trans_table2p,
         float,
-        caption="A transition table for 2 non-strict single-point mutations. The row corresponds to the starting amino acid and the row corresponds to the final amino acid.",
+        caption="A transition table for 2 non-strict single-point mutations. The row corresponds to the starting amino acid and the column corresponds to the final amino acid.",
         label="trans_table2p_non_strict")
 
 trans_table3p = np.dot(trans_table2p, trans_tablenp)
 write_trans_table(f"{TABLE_DIR}/trans_table3p_non_strict.tex",
         trans_table3p,
         float,
-        caption="A transition table for 3 non-strict single-point mutations. The row corresponds to the starting amino acid and the row corresponds to the final amino acid.",
+        caption="A transition table for 3 non-strict single-point mutations. The row corresponds to the starting amino acid and the column corresponds to the final amino acid.",
         label="trans_table3p_non_strict")
 
 # Strict transition tables
@@ -106,14 +106,14 @@ trans_table2p = make_trans_table(2)
 write_trans_table(f"{TABLE_DIR}/trans_table2p_strict.tex",
         trans_table2p,
         float,
-        caption="A transition table for 2 strict single-point mutations. The row corresponds to the starting amino acid and the row corresponds to the final amino acid.",
+        caption="A transition table for 2 strict single-point mutations. The row corresponds to the starting amino acid and the column corresponds to the final amino acid.",
         label="trans_table2p_strict")
 
 trans_table3p = make_trans_table(3)
 write_trans_table(f"{TABLE_DIR}/trans_table3p_strict.tex",
         trans_table3p,
         float,
-        caption="A transition table for 3 non-strict single-point mutations. The row corresponds to the starting amino acid and the row corresponds to the final amino acid.",
+        caption="A transition table for 3 non-strict single-point mutations. The row corresponds to the starting amino acid and the column corresponds to the final amino acid.",
         label="trans_table3p_strict")
 
 inpath = "../part2/aamut_fitness_all.csv"
@@ -238,5 +238,5 @@ def write_synnonsyn_table(path, table, dtype, caption, label):
 write_synnonsyn_table(f"{TABLE_DIR}/synnonsyn_table.tex",
         synonsyn_trans_tablenp,
         float,
-        caption="The ratio of synonymous versus non-synonymous mutations for each amino acid",
+        caption="The ratio of synonymous versus non-synonymous mutations for each amino acid.",
         label="synnonsyn")
