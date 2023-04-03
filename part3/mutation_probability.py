@@ -1,42 +1,84 @@
 # Collaboration by Emmanuel Ohiri Christopher Leap
 
 from neutral_network import table, BasicNeutralNetwork
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 
-# Change number from 1, 2, or 3, for respective n-point strict mutation; leave as 1 for non-strict n-point mutation
-base_muts = BasicNeutralNetwork(1)
-base_muts._build()
+TABLE_DIR = "../tables"
+STRICT = False
+count = 1
 
-#for key, value in base_muts.mutations.items():
-    #print(codon+":", muts)
 
 idx2aa = list(set(table.values()))
 idx2aa.sort()
-#print(idx2aa, len(idx2aa))
-
 aa2idx = {aa: i for i, aa in enumerate(idx2aa)}
-#print(aa2idx)
 
-count_table = np.zeros((len(idx2aa), len(idx2aa)))
+def write_trans_table(path, table, dtype, caption, label):
+    with open(path, "w") as file:
+        file.write("\\begin{table*}[]\n\t\centering\n\t\\begin{tabular}")
+        file.write("{c|c|c|c|c|c|c|c|c|c|c|c|c|c|c|c|c|c|c|c|c|c}\n")
 
-for condonA, muts in base_muts.mutations.items():
-    amino = table[condonA]
-    row = aa2idx[amino]
-    count_table[row][row] += len(muts[0])
+        # Write the headers
+        file.write("\t\t")
+        for i in range(len(table)):
+            if idx2aa[i] == "_":
+                file.write(" & \\_")
+            else:
+                file.write(f" & {idx2aa[i]}")
+        file.write(" \\\\\n")
 
-    for codonB in muts[1]:
-        amino = table[codonB]
-        col = aa2idx[amino]
-        count_table[row][col] += 1
+        for i, row in enumerate(table):
+            file.write("\t\t\\hline\n")
+            if idx2aa[i] == "_":
+                file.write("\t\t\\_")
+            else:
+                file.write(f"\t\t{idx2aa[i]}")
+            for val in row:
+                if dtype == int:
+                    file.write(f" & {int(val):2d}")
+                elif dtype == float:
+                    file.write(f" & {val:.2f}")
+            file.write(" \\\\\n")
 
-for i, row in enumerate(count_table):
-    print(f"{idx2aa[i]} ", end="")
-    for val in row:
-        print(f"{int(val):2d} ", end="")
-    print()
+        file.write("\t\\end{tabular}\n")
+        file.write("\t\\caption{" + caption + "}\n")
+        file.write("\t\\label{tab:" + label + "}\n")
+        file.write("\\end{table*}\n")
 
-trans_tablenp = count_table/np.sum(count_table, axis=0)
+def make_trans_table(num_hops):
+    # Change number from 1, 2, or 3, for respective n-point strict mutation; leave as 1 for non-strict n-point mutation
+    base_muts = BasicNeutralNetwork(num_hops)
+    base_muts._build()
+
+    count_table = np.zeros((len(idx2aa), len(idx2aa)))
+
+    for condonA, muts in base_muts.mutations.items():
+        amino = table[condonA]
+        row = aa2idx[amino]
+        count_table[row][row] += len(muts[0])
+
+        for codonB in muts[1]:
+            amino = table[codonB]
+            col = aa2idx[amino]
+            count_table[row][col] += 1
+
+    write_trans_table(f"{TABLE_DIR}/count_table_{num_hops}_pt.tex",
+            count_table,
+            int,
+            caption=f"A table of the number of {num_hops} single-point mutations that each amino acid can go through to get from one amino acid to another. The row corresponds to the starting amino acid and the row corresponds to the final amino acid.",
+            label=f"count_table_{num_hops}_pt")
+
+    trans_table = count_table/np.sum(count_table, axis=0)
+    return trans_table
+
+# Single-point transition table
+trans_tablenp = make_trans_table(1)
+write_trans_table(f"{TABLE_DIR}/trans_tablenp.tex",
+        trans_tablenp,
+        float,
+        caption="A transition table for 1 single-point mutation. The row corresponds to the starting amino acid and the row corresponds to the final amino acid.",
+        label="trans_tablenp")
 
 for i, row in enumerate(trans_tablenp):
     print(f"{idx2aa[i]} ", end="")
@@ -44,24 +86,35 @@ for i, row in enumerate(trans_tablenp):
         print(f"{val:.2f} ", end="")
     print()
 
-# Uncomment for non-strict mutation
-'''
+# Non-strict transition tables
 trans_table2p = np.dot(trans_tablenp, trans_tablenp)
-
-for i, row in enumerate(trans_table2p):
-    print(f"{idx2aa[i]} ", end="")
-    for val in row:
-        print(f"{val:.2f} ", end="")
-    print()
+write_trans_table(f"{TABLE_DIR}/trans_table2p_non_strict.tex",
+        trans_table2p,
+        float,
+        caption="A transition table for 2 non-strict single-point mutations. The row corresponds to the starting amino acid and the row corresponds to the final amino acid.",
+        label="trans_table2p_non_strict")
 
 trans_table3p = np.dot(trans_table2p, trans_tablenp)
+write_trans_table(f"{TABLE_DIR}/trans_table3p_non_strict.tex",
+        trans_table3p,
+        float,
+        caption="A transition table for 3 non-strict single-point mutations. The row corresponds to the starting amino acid and the row corresponds to the final amino acid.",
+        label="trans_table3p_non_strict")
 
-for i, row in enumerate(trans_table3p):
-    print(f"{idx2aa[i]} ", end="")
-    for val in row:
-        print(f"{val:.2f} ", end="")
-    print()
-'''
+# Strict transition tables
+trans_table2p = make_trans_table(2)
+write_trans_table(f"{TABLE_DIR}/trans_table2p_strict.tex",
+        trans_table2p,
+        float,
+        caption="A transition table for 2 strict single-point mutations. The row corresponds to the starting amino acid and the row corresponds to the final amino acid.",
+        label="trans_table2p_strict")
+
+trans_table3p = make_trans_table(3)
+write_trans_table(f"{TABLE_DIR}/trans_table3p_strict.tex",
+        trans_table3p,
+        float,
+        caption="A transition table for 3 non-strict single-point mutations. The row corresponds to the starting amino acid and the row corresponds to the final amino acid.",
+        label="trans_table3p_strict")
 
 inpath = "../part2/aamut_fitness_all.csv"
 gene = "S"
@@ -85,24 +138,40 @@ print(gene_count)
 gene_dist = gene_count/np.sum(gene_count)
 print(gene_dist)
 
+plt.rcParams["font.family"] = "serif"
+plt.rcParams["font.size"] = 6
+
+def plot_dist(dist, title, path):
+    fig, axs = plt.subplots(figsize=(3.5,3.5))
+    axs.bar(idx2aa, gene_dist, color="white", edgecolor="black")
+    axs.set_xlabel("Amino acid")
+    axs.set_ylabel("Percentage found in genome")
+    axs.set_title(title)
+    plt.savefig(path, bbox_inches="tight")
+
+plot_dist(
+    gene_dist,
+    "Original Genome",
+    "../figures/aa_dist_original.pdf")
+
 gene_transnp = np.dot(gene_dist, trans_tablenp)
 print(gene_transnp)
 
-# For strict 1- 2- or 3-point mutation, change the argument number on line 17 respectively
+plot_dist(
+    gene_transnp,
+    "1 Single-point Mutation",
+    "../figures/aa_dist_1p.pdf")
+
+# Generate synonymous vs. non-synonymous
 expected_strict_gene_transnp = gene_transnp*np.sum(gene_count)
-print(expected_strict_gene_transnp)
 
-# Uncomment for non-strict mutation
-'''
-nonstrict_gene_trans2p = np.dot(gene_dist, trans_table2p)
-print(nonstrict_gene_trans2p)
-
-nonstrict_gene_trans3p = np.dot(gene_dist, trans_table3p)
-print(nonstrict_gene_trans3p)
-'''
+gene_trans2p = np.dot(gene_dist, trans_table2p)
+gene_trans3p = np.dot(gene_dist, trans_table3p)
 
 synnonsyn_count_table = np.zeros((len(idx2aa), 2))
 
+base_muts = BasicNeutralNetwork(1)
+base_muts._build()
 for condon, muts in base_muts.mutations.items():
     amino = table[condon]
     row = aa2idx[amino]
@@ -124,11 +193,50 @@ for i, row in enumerate(synonsyn_trans_tablenp):
     print()
 
 synonsyn_gene_trans_table1p = np.dot(gene_dist, synonsyn_trans_tablenp)
-print(synonsyn_gene_trans_table1p)
+synonsyn_gene_trans_table2p = np.dot(gene_trans2p, synonsyn_trans_tablenp)
+synonsyn_gene_trans_table3p = np.dot(gene_trans3p, synonsyn_trans_tablenp)
 
-# For 2- or 3-point mutation, change the argument number on line 17 to 1 or 2, respectively
-synonsyn_gene_trans_tablenp = np.dot(gene_transnp, synonsyn_trans_tablenp)
-print(synonsyn_gene_trans_tablenp)
+def plot_pie(synonsyn, title, path):
+    fig, ax = plt.subplots(figsize=(3.5, 3.5))
+    ax.pie(synonsyn, labels=["Synonymous", "Non-synonymous"], autopct='%1.4f%%')
+    ax.legend()
+    ax.set_title(title)
+    plt.savefig(path, bbox_inches="tight")
 
-#temp2aa = np.dot(gene_dist, trans_tablenp)
-#temp2syn = np.dot(gene_dist, trans_table1p2)
+plot_pie(synonsyn_gene_trans_table1p, "After 1 Single-point Mutation",
+    "../figures/synonsyn_1p.pdf")
+plot_pie(synonsyn_gene_trans_table2p, "After 2 Single-point Mutations",
+    "../figures/synonsyn_2p.pdf")
+plot_pie(synonsyn_gene_trans_table3p, "After 3 Single-point Mutations",
+    "../figures/synonsyn_3p.pdf")
+
+def write_synnonsyn_table(path, table, dtype, caption, label):
+    with open(path, "w") as file:
+        file.write("\\begin{table}[]\n\t\centering\n\t\\begin{tabular}")
+        file.write("{c|c|c|c|c|c|c|c|c|c|c|c|c|c|c|c|c|c|c|c|c|c}\n")
+
+        # Write the headers
+        file.write("\t\t& Synonymous & Non-synonymous \\\\\n")
+
+        for i, row in enumerate(table):
+            file.write("\t\t\\hline\n")
+            if idx2aa[i] == "_":
+                file.write("\t\t\\_")
+            else:
+                file.write(f"\t\t{idx2aa[i]}")
+            for val in row:
+                if dtype == int:
+                    file.write(f" & {int(val):2d}")
+                elif dtype == float:
+                    file.write(f" & {val:.2f}")
+            file.write(" \\\\\n")
+
+        file.write("\t\\end{tabular}\n")
+        file.write("\t\\caption{" + caption + "}\n")
+        file.write("\t\\label{tab:" + label + "}\n")
+        file.write("\\end{table}\n")
+write_synnonsyn_table(f"{TABLE_DIR}/synnonsyn_table.tex",
+        synonsyn_trans_tablenp,
+        float,
+        caption="The ratio of synonymous versus non-synonymous mutations for each amino acid",
+        label="synnonsyn")
